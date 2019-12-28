@@ -15,6 +15,9 @@ jobs:
 
     - run: test -z $(gofmt -l .)
 
-    - run: golint -set_exit_status ./...
+    - uses: grandcolline/golang-github-actions@v1.1.0
+      with:
+        run: lint
+        token: ${{ secrets.GITHUB_TOKEN }}
 
     - run: make release
