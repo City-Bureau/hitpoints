@@ -15,5 +15,5 @@ Simple setup for tracking page hits across multiple domains through an embedded 
 
 - [ ] Static files for JS, HTML snippet
 - [ ] Terraform setup for deploying to AWS, Azure
-    - Notes on deployment https://blog.cloudflare.com/exposing-go-on-the-internet/
+- [ ] Public internet setup for SSL
 - [ ] Basic admin dashboard (authentication or setup for HTTP basic)

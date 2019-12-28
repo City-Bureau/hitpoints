@@ -1,8 +1,10 @@
 package cmd
 
 import (
+	"crypto/tls"
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"time"
 
@@ -82,7 +84,7 @@ func init() {
 	rootCmd.PersistentFlags().IntP("port", "p", 8080, "Port that the server should run on")
 	rootCmd.PersistentFlags().StringP("cron", "c", "30 * * * *", "Cron expression for when archives should be written")
 	rootCmd.PersistentFlags().Bool("ssl", false, "Should SSL be enabled for the server")
-	rootCmd.PersistentFlags().String("ssl-crt", "", "SSL certificate file path")
+	rootCmd.PersistentFlags().String("ssl-cert", "", "SSL certificate file path")
 	rootCmd.PersistentFlags().String("ssl-key", "", "SSL key file path")
 
 	fileCmd.Flags().StringP("filepath", "f", "/tmp", "Directory path for writing output files")
@@ -124,6 +126,23 @@ func archiveAndClearCache(hitServer *server.HitServer, hitStorage storage.HitSto
 	return nil
 }
 
+func serverFromMux(mux *http.ServeMux) *http.Server {
+	return &http.Server{
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+		IdleTimeout:  120 * time.Second,
+		Handler:      mux,
+	}
+}
+
+func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
+	u := r.URL
+	host, _, _ := net.SplitHostPort(r.Host)
+	u.Host = net.JoinHostPort(host, "443")
+	u.Scheme = "https"
+	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+}
+
 func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, sslCert string, sslKey string) {
 	hitServer := server.NewHitServer()
 
@@ -140,38 +159,36 @@ func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, s
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", hitServer.HandlePixelRequest)
+	srv := serverFromMux(mux)
 
-	srv := &http.Server{
-		Addr:         fmt.Sprintf(":%d", port),
-		ReadTimeout:  5 * time.Second,
-		WriteTimeout: 10 * time.Second,
-		IdleTimeout:  120 * time.Second,
-		Handler:      mux,
-	}
-
+	// TODO: Let's Encrypt configuration https://godoc.org/golang.org/x/crypto/acme/autocert
 	if ssl && sslCert != "" && sslKey != "" {
-		// Sping up main HTTP port in goroutine
+		// Spinning up main HTTP port in goroutine
 		go func() {
-			err := srv.ListenAndServe()
+			redirectMux := http.NewServeMux()
+			redirectMux.HandleFunc("/", redirectToHTTPS)
+			redirectSrv := serverFromMux(redirectMux)
+			redirectSrv.Addr = fmt.Sprintf(":%d", port)
+			err := redirectSrv.ListenAndServe()
 			if err != nil {
 				log.Fatal(err)
 			}
 		}()
 
-		sslSrv := &http.Server{
-			Addr:         ":443",
-			ReadTimeout:  5 * time.Second,
-			WriteTimeout: 10 * time.Second,
-			IdleTimeout:  120 * time.Second,
-			Handler:      mux,
-			TLSConfig:    nil,
+		srv.Addr = ":443"
+		srv.TLSConfig = &tls.Config{
+			PreferServerCipherSuites: true,
+			CurvePreferences: []tls.CurveID{
+				tls.CurveP256,
+				tls.X25519,
+			},
 		}
-
-		err := sslSrv.ListenAndServeTLS(sslCert, sslKey)
+		err := srv.ListenAndServeTLS(sslCert, sslKey)
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
+		srv.Addr = fmt.Sprintf(":%d", port)
 		err := srv.ListenAndServe()
 		if err != nil {
 			log.Fatal(err)
