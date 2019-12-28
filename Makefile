@@ -11,6 +11,10 @@ start:
 test:
 	go test ./pkg/...
 
+lint:
+	test -z $$(gofmt -l .)
+	golint -set_exit_status ./...
+
 clean:
 	rm -rf release
 
