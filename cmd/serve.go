@@ -73,8 +73,6 @@ var s3Cmd = &cobra.Command{
 	},
 }
 
-// TODO: Make serve into two separate subcommands? azure, s3 as sub-sub commands instead of args?
-
 func init() {
 	rootCmd.AddCommand(fileCmd)
 	rootCmd.AddCommand(azureCmd)
@@ -138,7 +136,6 @@ func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, s
 		}
 	})
 
-	// TODO: Add a separate cron for saving to file
 	c.Start()
 
 	mux := http.NewServeMux()

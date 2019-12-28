@@ -13,12 +13,8 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
+// TODO: Save to file if it makes sense
 const cachePath = "/tmp/hitpoints"
-
-// PixelGifBytes returns the content of the pixel gif in https://github.com/documentcloud/pixel-ping
-func PixelGifBytes() []byte {
-	return []byte{71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0, 255, 255, 255, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59}
-}
 
 func loadCache() *cache.Cache {
 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
@@ -52,7 +48,11 @@ func saveCache(hitCache *cache.Cache) error {
 type HitServer struct {
 	hitCache *cache.Cache
 	pixel    []byte
-	// TODO: File storage path?
+}
+
+// PixelGifBytes returns the content of the pixel gif in https://github.com/documentcloud/pixel-ping
+func PixelGifBytes() []byte {
+	return []byte{71, 73, 70, 56, 57, 97, 1, 0, 1, 0, 128, 0, 0, 255, 255, 255, 0, 0, 0, 44, 0, 0, 0, 0, 1, 0, 1, 0, 0, 2, 2, 68, 1, 0, 59}
 }
 
 // NewHitServer creates a HitServer
@@ -63,15 +63,22 @@ func NewHitServer() HitServer {
 	}
 }
 
+const defaultHit = "NA"
+
 // Get hit value from request if there
 func (s *HitServer) getRequestHit(r *http.Request) string {
+	var reqHit string
 	urlParams := r.URL.Query()["url"]
 
-	// TODO: Have a default if the value is empty
 	if len(urlParams) > 0 {
-		return urlParams[0]
+		reqHit = urlParams[0]
+	} else {
+		reqHit = r.Referer()
 	}
-	return r.Referer()
+	if reqHit == "" {
+		return defaultHit
+	}
+	return reqHit
 }
 
 // Add or increment cache key for URL hit
@@ -103,7 +110,8 @@ func (s *HitServer) ClearCache() {
 func (s *HitServer) HandlePixelRequest(w http.ResponseWriter, r *http.Request) {
 	reqHit := s.getRequestHit(r)
 
-	// TODO: Add logging here?
+	log.Println(r.URL)
+
 	err := s.addHit(reqHit)
 	if err != nil {
 		http.Error(w, "There was an error processing your request", 500)

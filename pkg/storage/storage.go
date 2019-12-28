@@ -79,8 +79,6 @@ type AzureStorage struct {
 	credential  *azblob.SharedKeyCredential
 }
 
-// TODO: Should fail if credentials don't work on initialization
-
 // NewAzureStorage creates a new AzureStorage from credentials
 func NewAzureStorage(accountName string, accountKey string, container string) (HitStorage, error) {
 	credential, err := azblob.NewSharedKeyCredential(accountName, accountKey)
@@ -95,8 +93,6 @@ func NewAzureStorage(accountName string, accountKey string, container string) (H
 	}
 	return azStorage, nil
 }
-
-// TODO: should int or int64 be used?
 
 // Archive saves the cache to Azure Blob Storage
 func (s *AzureStorage) Archive(items map[string]int) error {
@@ -138,19 +134,25 @@ type S3Storage struct {
 	accessKeyID     string
 	secretAccessKey string
 	bucket          string
-	credentials     *credentials.Credentials
+	svc             *s3.S3
 }
-
-// TODO: Should fail if credentials don't work on initialization
 
 // NewS3Storage creates a new S3Storage instance
 func NewS3Storage(accessKeyID string, secretAccessKey string, bucket string, useEnv bool) (HitStorage, error) {
-	creds := credentials.NewEnvCredentials()
+	var creds *credentials.Credentials
+	if useEnv {
+		creds = credentials.NewEnvCredentials()
+	} else {
+		creds = credentials.NewStaticCredentials(accessKeyID, secretAccessKey, "")
+	}
+	svc := s3.New(session.Must(session.NewSession(&aws.Config{
+		Credentials: creds,
+	})))
 	s3Storage := &S3Storage{
 		accessKeyID,
 		secretAccessKey,
 		bucket,
-		creds,
+		svc,
 	}
 	return s3Storage, nil
 }
@@ -167,22 +169,13 @@ func (s *S3Storage) Archive(items map[string]int) error {
 		return err
 	}
 
-	sess, err := session.NewSession(&aws.Config{
-		Credentials: s.credentials,
-	})
-
-	if err != nil {
-		return err
-	}
-
-	svc := s3.New(sess)
 	s3Input := &s3.PutObjectInput{
 		Body:   aws.ReadSeekCloser(bytes.NewReader(recB)),
 		Bucket: aws.String(s.bucket),
 		Key:    aws.String(fmt.Sprintf("%s/hits.json", datetimePath(rec.Timestamp))),
 	}
 
-	_, err = svc.PutObject(s3Input)
+	_, err = s.svc.PutObject(s3Input)
 
 	return err
 }

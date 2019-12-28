@@ -59,7 +59,7 @@ func TestGetRequestHit(t *testing.T) {
 
 	req = &http.Request{URL: baseURL}
 
-	if hitServer.getRequestHit(req) != "" {
+	if hitServer.getRequestHit(req) != defaultHit {
 		t.Errorf("Hit server not parsing empty hit from URL")
 	}
 }
