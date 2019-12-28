@@ -138,7 +138,7 @@ type S3Storage struct {
 }
 
 // NewS3Storage creates a new S3Storage instance
-func NewS3Storage(accessKeyID string, secretAccessKey string, bucket string, useEnv bool) (HitStorage, error) {
+func NewS3Storage(accessKeyID string, secretAccessKey string, bucket string, region string, useEnv bool) (HitStorage, error) {
 	var creds *credentials.Credentials
 	if useEnv {
 		creds = credentials.NewEnvCredentials()
@@ -147,6 +147,7 @@ func NewS3Storage(accessKeyID string, secretAccessKey string, bucket string, use
 	}
 	svc := s3.New(session.Must(session.NewSession(&aws.Config{
 		Credentials: creds,
+		Region:      aws.String(region),
 	})))
 	s3Storage := &S3Storage{
 		accessKeyID,

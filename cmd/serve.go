@@ -20,7 +20,7 @@ var fileCmd = &cobra.Command{
 	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd)
+		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd.Parent())
 		pathname, _ := cmd.Flags().GetString("filepath")
 		hitStorage, err := storage.NewFileStorage(pathname)
 
@@ -38,7 +38,7 @@ var azureCmd = &cobra.Command{
 	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd)
+		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd.Parent())
 		accountName, _ := cmd.Flags().GetString("account-name")
 		accountKey, _ := cmd.Flags().GetString("account-key")
 		container, _ := cmd.Flags().GetString("container")
@@ -58,12 +58,13 @@ var s3Cmd = &cobra.Command{
 	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd)
-		accessKeyID, _ := cmd.Flags().GetString("aws-access-key-id")
-		secretAccessKey, _ := cmd.Flags().GetString("aws-secret-access-key")
-		s3Bucket, _ := cmd.Flags().GetString("s3-bucket")
-		useEnv, _ := cmd.Flags().GetBool("aws-env")
-		hitStorage, err := storage.NewS3Storage(accessKeyID, secretAccessKey, s3Bucket, useEnv)
+		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd.Parent())
+		accessKeyID, _ := cmd.Flags().GetString("access-key-id")
+		secretAccessKey, _ := cmd.Flags().GetString("secret-access-key")
+		region, _ := cmd.Flags().GetString("region")
+		s3Bucket, _ := cmd.Flags().GetString("bucket")
+		useEnv, _ := cmd.Flags().GetBool("use-env")
+		hitStorage, err := storage.NewS3Storage(accessKeyID, secretAccessKey, s3Bucket, region, useEnv)
 
 		if err != nil {
 			log.Fatal(err)
@@ -92,15 +93,13 @@ func init() {
 
 	s3Cmd.Flags().StringP("access-key-id", "i", "", "AWS Access key ID")
 	s3Cmd.Flags().StringP("secret-access-key", "k", "", "AWS Secret access key")
+	s3Cmd.Flags().StringP("region", "r", "us-east-1", "AWS region")
 	s3Cmd.Flags().StringP("bucket", "b", "", "S3 bucket")
-	s3Cmd.Flags().Bool("aws-env", false, "Use env vars for setting credentials")
+	s3Cmd.Flags().BoolP("use-env", "e", false, "Use env vars for setting credentials")
 }
 
 func parseBaseArgs(cmd *cobra.Command) (int, string, bool, string, string) {
-	port, err := cmd.Parent().PersistentFlags().GetInt("port")
-	if err != nil {
-		log.Println(err)
-	}
+	port, _ := cmd.PersistentFlags().GetInt("port")
 	cronSpec, _ := cmd.PersistentFlags().GetString("cron")
 	ssl, _ := cmd.PersistentFlags().GetBool("ssl")
 	sslCert, _ := cmd.PersistentFlags().GetString("ssl-cert")
@@ -130,6 +129,7 @@ func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, s
 
 	c := cron.New()
 	c.AddFunc(cronSpec, func() {
+		log.Println("Archiving...")
 		err := archiveAndClearCache(&hitServer, hitStorage)
 		if err != nil {
 			log.Println(err)
