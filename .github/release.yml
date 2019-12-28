@@ -1,0 +1,58 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Publish release
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-node@v1
+        with:
+          node-version: "11.x"
+      
+      - run: npm install -g conventional-changelog-cli
+
+      - run: conventional-changelog -p conventional -i CHANGELOG.md -s -r 2
+
+      - uses: ncipollo/release-action@v1
+        with:
+          bodyFile: CHANGELOG.md
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  release-assets:
+    name: Publish release assets for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        include:
+          - os: ubuntu-latest
+            arch: linux
+
+          - os: windows-latest
+            arch: windows
+
+          - os: macos-latest
+            arch: darwin
+
+    steps:
+      - uses: actions/checkout@v1
+
+      - uses: actions/setup-go@v1
+        with:
+          go-version: 1.12
+
+      - run: make release/hitpoints-${{ matrix.arch }}-amd64.tar.gz
+
+      - uses: svenstaro/upload-release-action@v1-release
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: release/hitpoints-${{ matrix.arch }}-amd64.tar.gz
+          asset_name: hitpoints-${{ matrix.arch }}-amd64.tar.gz
+          tag: ${{ github.ref }}
