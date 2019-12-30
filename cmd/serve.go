@@ -12,9 +12,16 @@ import (
 	"github.com/City-Bureau/hitpoints/pkg/storage"
 	cron "github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
+	"golang.org/x/crypto/acme/autocert"
 )
 
-// TODO: Secret key and mode for working like Pixel Ping (flush results when request is made to endpoint)
+// CommandConfig is a wrapper around several base command config parameters
+type CommandConfig struct {
+	port     int
+	cronSpec string
+	domain   string
+	ssl      bool
+}
 
 var fileCmd = &cobra.Command{
 	Use:   "file",
@@ -22,7 +29,7 @@ var fileCmd = &cobra.Command{
 	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd.Parent())
+		cmdConf := parseBaseArgs(cmd.Parent())
 		pathname, _ := cmd.Flags().GetString("filepath")
 		hitStorage, err := storage.NewFileStorage(pathname)
 
@@ -30,7 +37,7 @@ var fileCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		serve(port, hitStorage, cronSpec, ssl, sslCert, sslKey)
+		serve(cmdConf, hitStorage)
 	},
 }
 
@@ -40,7 +47,7 @@ var azureCmd = &cobra.Command{
 	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd.Parent())
+		cmdConf := parseBaseArgs(cmd.Parent())
 		accountName, _ := cmd.Flags().GetString("account-name")
 		accountKey, _ := cmd.Flags().GetString("account-key")
 		container, _ := cmd.Flags().GetString("container")
@@ -50,7 +57,7 @@ var azureCmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		serve(port, hitStorage, cronSpec, ssl, sslCert, sslKey)
+		serve(cmdConf, hitStorage)
 	},
 }
 
@@ -60,7 +67,7 @@ var s3Cmd = &cobra.Command{
 	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
-		port, cronSpec, ssl, sslCert, sslKey := parseBaseArgs(cmd.Parent())
+		cmdConf := parseBaseArgs(cmd.Parent())
 		accessKeyID, _ := cmd.Flags().GetString("access-key-id")
 		secretAccessKey, _ := cmd.Flags().GetString("secret-access-key")
 		region, _ := cmd.Flags().GetString("region")
@@ -72,7 +79,7 @@ var s3Cmd = &cobra.Command{
 			log.Fatal(err)
 		}
 
-		serve(port, hitStorage, cronSpec, ssl, sslCert, sslKey)
+		serve(cmdConf, hitStorage)
 	},
 }
 
@@ -83,15 +90,14 @@ func init() {
 
 	rootCmd.PersistentFlags().IntP("port", "p", 8080, "Port that the server should run on")
 	rootCmd.PersistentFlags().StringP("cron", "c", "30 * * * *", "Cron expression for when archives should be written")
+	rootCmd.PersistentFlags().StringP("domain", "d", "", "Domain for Let's Encrypt")
 	rootCmd.PersistentFlags().Bool("ssl", false, "Should SSL be enabled for the server")
-	rootCmd.PersistentFlags().String("ssl-cert", "", "SSL certificate file path")
-	rootCmd.PersistentFlags().String("ssl-key", "", "SSL key file path")
 
 	fileCmd.Flags().StringP("filepath", "f", "/tmp", "Directory path for writing output files")
 
 	azureCmd.Flags().StringP("account-name", "n", "", "Azure account name")
 	azureCmd.Flags().StringP("account-key", "k", "", "Azure account key")
-	azureCmd.Flags().StringP("container", "c", "", "Azure container")
+	azureCmd.Flags().String("container", "", "Azure container")
 
 	s3Cmd.Flags().StringP("access-key-id", "i", "", "AWS Access key ID")
 	s3Cmd.Flags().StringP("secret-access-key", "k", "", "AWS Secret access key")
@@ -100,14 +106,13 @@ func init() {
 	s3Cmd.Flags().BoolP("use-env", "e", false, "Use env vars for setting credentials")
 }
 
-func parseBaseArgs(cmd *cobra.Command) (int, string, bool, string, string) {
+func parseBaseArgs(cmd *cobra.Command) CommandConfig {
 	port, _ := cmd.PersistentFlags().GetInt("port")
 	cronSpec, _ := cmd.PersistentFlags().GetString("cron")
+	domain, _ := cmd.PersistentFlags().GetString("domain")
 	ssl, _ := cmd.PersistentFlags().GetBool("ssl")
-	sslCert, _ := cmd.PersistentFlags().GetString("ssl-cert")
-	sslKey, _ := cmd.PersistentFlags().GetString("ssl-key")
 
-	return port, cronSpec, ssl, sslCert, sslKey
+	return CommandConfig{port, cronSpec, domain, ssl}
 }
 
 func archiveAndClearCache(hitServer *server.HitServer, hitStorage storage.HitStorage) error {
@@ -137,17 +142,22 @@ func serverFromMux(mux *http.ServeMux) *http.Server {
 
 func redirectToHTTPS(w http.ResponseWriter, r *http.Request) {
 	u := r.URL
-	host, _, _ := net.SplitHostPort(r.Host)
+	host, _, err := net.SplitHostPort(r.Host)
+	if err != nil {
+		host = r.Host
+	}
 	u.Host = net.JoinHostPort(host, "443")
 	u.Scheme = "https"
 	http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
 }
 
-func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, sslCert string, sslKey string) {
+func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
+	var mgr *autocert.Manager
+
 	hitServer := server.NewHitServer()
 
 	c := cron.New()
-	c.AddFunc(cronSpec, func() {
+	c.AddFunc(cmdConf.cronSpec, func() {
 		log.Println("Archiving...")
 		err := archiveAndClearCache(&hitServer, hitStorage)
 		if err != nil {
@@ -161,14 +171,18 @@ func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, s
 	mux.HandleFunc("/", hitServer.HandlePixelRequest)
 	srv := serverFromMux(mux)
 
-	// TODO: Let's Encrypt configuration https://godoc.org/golang.org/x/crypto/acme/autocert
-	if ssl && sslCert != "" && sslKey != "" {
+	if cmdConf.ssl {
+		mgr = &autocert.Manager{
+			Prompt:     autocert.AcceptTOS,
+			Cache:      autocert.DirCache("certs"),
+			HostPolicy: autocert.HostWhitelist(cmdConf.domain),
+		}
 		// Spinning up main HTTP port in goroutine
 		go func() {
-			redirectMux := http.NewServeMux()
-			redirectMux.HandleFunc("/", redirectToHTTPS)
-			redirectSrv := serverFromMux(redirectMux)
-			redirectSrv.Addr = fmt.Sprintf(":%d", port)
+			log.Println("Starting redirect server...")
+			redirectSrv := serverFromMux(nil)
+			redirectSrv.Addr = fmt.Sprintf(":%d", cmdConf.port)
+			redirectSrv.Handler = mgr.HTTPHandler(nil)
 			err := redirectSrv.ListenAndServe()
 			if err != nil {
 				log.Fatal(err)
@@ -176,19 +190,16 @@ func serve(port int, hitStorage storage.HitStorage, cronSpec string, ssl bool, s
 		}()
 
 		srv.Addr = ":443"
-		srv.TLSConfig = &tls.Config{
-			PreferServerCipherSuites: true,
-			CurvePreferences: []tls.CurveID{
-				tls.CurveP256,
-				tls.X25519,
-			},
-		}
-		err := srv.ListenAndServeTLS(sslCert, sslKey)
+		srv.TLSConfig = &tls.Config{GetCertificate: mgr.GetCertificate}
+
+		log.Println("Starting TLS server...")
+		err := srv.ListenAndServeTLS("", "")
 		if err != nil {
 			log.Fatal(err)
 		}
 	} else {
-		srv.Addr = fmt.Sprintf(":%d", port)
+		log.Println("Starting server...")
+		srv.Addr = fmt.Sprintf(":%d", cmdConf.port)
 		err := srv.ListenAndServe()
 		if err != nil {
 			log.Fatal(err)
