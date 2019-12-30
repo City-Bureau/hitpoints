@@ -14,7 +14,6 @@ import (
 	cache "github.com/patrickmn/go-cache"
 )
 
-// TODO: Save to file if it makes sense
 const cachePath = "/tmp/hitpoints"
 
 func loadCache() *cache.Cache {
@@ -33,16 +32,6 @@ func loadCache() *cache.Cache {
 	}
 	log.Print("Successfully loaded cache from file")
 	return cache.NewFrom(cache.NoExpiration, 0*time.Second, cacheMap)
-}
-
-func saveCache(hitCache *cache.Cache) error {
-	buf := new(bytes.Buffer)
-	enc := gob.NewEncoder(buf)
-	err := enc.Encode(hitCache)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(cachePath, buf.Bytes(), 0644)
 }
 
 // HitServer is the main struct for managing hitpoints
@@ -107,6 +96,17 @@ func (s *HitServer) CacheItems() map[string]int {
 		hitMap[k] = v.Object.(int)
 	}
 	return hitMap
+}
+
+// SaveCache saves the current HitServer cache to disk
+func (s *HitServer) SaveCache() error {
+	buf := new(bytes.Buffer)
+	enc := gob.NewEncoder(buf)
+	err := enc.Encode(s.CacheItems())
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(cachePath, buf.Bytes(), 0644)
 }
 
 // ClearCache flushes the HitServer cache

@@ -176,6 +176,15 @@ func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 	hitServer := server.NewHitServer()
 
 	c := cron.New()
+
+	c.AddFunc("*/5 * * * *", func() {
+		log.Println("Saving cache to disk")
+		err := hitServer.SaveCache()
+		if err != nil {
+			log.Fatal(err)
+		}
+	})
+
 	c.AddFunc(cmdConf.cronSpec, func() {
 		log.Println("Archiving...")
 		err := archiveAndClearCache(&hitServer, hitStorage)
