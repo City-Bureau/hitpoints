@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -65,22 +66,27 @@ func NewHitServer() HitServer {
 
 const defaultHit = "NA"
 
-// TODO: Don't include query params in URL for hit? Add title?
-
 // Get hit value from request if there
 func (s *HitServer) getRequestHit(r *http.Request) string {
-	var reqHit string
+	var reqURL string
 	urlParams := r.URL.Query()["url"]
 
 	if len(urlParams) > 0 {
-		reqHit = urlParams[0]
+		reqURL = urlParams[0]
 	} else {
-		reqHit = r.Referer()
+		reqURL = r.Referer()
 	}
-	if reqHit == "" {
+
+	parsedURL, err := url.Parse(reqURL)
+	if reqURL == "" || err != nil {
 		return defaultHit
 	}
-	return reqHit
+
+	// Remove query parameters and # fragments
+	parsedURL.RawQuery = ""
+	parsedURL.Fragment = ""
+
+	return parsedURL.String()
 }
 
 // Add or increment cache key for URL hit

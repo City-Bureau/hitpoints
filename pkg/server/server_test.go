@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"fmt"
 
 	"io/ioutil"
 	"net/http"
@@ -61,6 +62,13 @@ func TestGetRequestHit(t *testing.T) {
 
 	if hitServer.getRequestHit(req) != defaultHit {
 		t.Errorf("Hit server not parsing empty hit from URL")
+	}
+
+	headers = http.Header{}
+	headers.Add("Referer", fmt.Sprintf("%s?param=1#fragment", baseURL))
+	req = &http.Request{URL: baseURL, Header: headers}
+	if hitServer.getRequestHit(req) != baseURL.String() {
+		t.Errorf("Hit server not removing query param and fragment from URL")
 	}
 }
 
