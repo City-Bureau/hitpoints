@@ -3,7 +3,7 @@ BUILD := $(shell git rev-parse --short HEAD)
 LDFLAGS := -ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 ARCH_LIST = darwin linux windows
 
-.PHONY: clean start test release
+.PHONY: clean start test lint release
 
 start:
 	go run ./main.go

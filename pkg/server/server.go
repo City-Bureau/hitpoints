@@ -65,6 +65,8 @@ func NewHitServer() HitServer {
 
 const defaultHit = "NA"
 
+// TODO: Don't include query params in URL for hit? Add title?
+
 // Get hit value from request if there
 func (s *HitServer) getRequestHit(r *http.Request) string {
 	var reqHit string

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/url"
+	"os"
 	"path/filepath"
 	"time"
 
@@ -67,8 +68,9 @@ func (s *FileStorage) Archive(items map[string]int) error {
 		return err
 	}
 
-	filename := fmt.Sprintf("%s/hits.json", datetimePath(rec.Timestamp))
-	return ioutil.WriteFile(filepath.Join(s.path, filename), recB, 0644)
+	hitsDir := datetimePath(rec.Timestamp)
+	os.MkdirAll(hitsDir, 0644)
+	return ioutil.WriteFile(filepath.Join(s.path, hitsDir, "hits.json"), recB, 0644)
 }
 
 // AzureStorage manages saving archives to Azure Blob Storage
