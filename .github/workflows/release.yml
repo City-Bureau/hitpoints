@@ -3,7 +3,7 @@ name: Release
 on:
   push:
     tags:
-      - 'v*'
+      - "v*"
 
 jobs:
   release:
@@ -15,7 +15,7 @@ jobs:
       - uses: actions/setup-node@v1
         with:
           node-version: "11.x"
-      
+
       - run: npm install -g conventional-changelog-cli
 
       - run: conventional-changelog -p conventional -i CHANGELOG.md -s -r 2
@@ -30,16 +30,16 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        arch: [linux, windows, darwin]
         include:
-          - os: ubuntu-latest
-            arch: linux
+          - arch: linux
+            os: ubuntu-latest
 
-          - os: windows-latest
-            arch: windows
+          - arch: windows
+            os: ubuntu-latest
 
-          - os: macos-latest
-            arch: darwin
+          - arch: darwin
+            os: macos-latest
 
     steps:
       - uses: actions/checkout@v1
