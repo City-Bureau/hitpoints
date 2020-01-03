@@ -73,8 +73,8 @@ var s3Cmd = &cobra.Command{
 		secretAccessKey, _ := cmd.Flags().GetString("secret-access-key")
 		region, _ := cmd.Flags().GetString("region")
 		s3Bucket, _ := cmd.Flags().GetString("bucket")
-		useEnv, _ := cmd.Flags().GetBool("use-env")
-		hitStorage, err := storage.NewS3Storage(accessKeyID, secretAccessKey, s3Bucket, region, useEnv)
+		useRole, _ := cmd.Flags().GetBool("role")
+		hitStorage, err := storage.NewS3Storage(accessKeyID, secretAccessKey, s3Bucket, region, useRole)
 
 		if err != nil {
 			log.Fatal(err)
@@ -104,7 +104,7 @@ func init() {
 	s3Cmd.Flags().StringP("secret-access-key", "k", "", "AWS Secret access key")
 	s3Cmd.Flags().StringP("region", "r", "us-east-1", "AWS region")
 	s3Cmd.Flags().StringP("bucket", "b", "", "S3 bucket")
-	s3Cmd.Flags().BoolP("use-env", "e", false, "Use env vars for setting credentials")
+	s3Cmd.Flags().Bool("role", false, "Use EC2 role for getting credentials")
 }
 
 func parseBaseArgs(cmd *cobra.Command) CommandConfig {

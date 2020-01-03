@@ -117,7 +117,6 @@ func (s *HitServer) ClearCache() {
 // HandlePixelRequest updates the cache and returns the pixel GIF
 func (s *HitServer) HandlePixelRequest(w http.ResponseWriter, r *http.Request) {
 	reqHit := s.getRequestHit(r)
-
 	log.Println(r.URL)
 
 	err := s.addHit(reqHit)

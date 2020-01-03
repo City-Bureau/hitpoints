@@ -14,6 +14,7 @@ import (
 	"github.com/Azure/azure-storage-blob-go/azblob"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/credentials/ec2rolecreds"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/s3"
 )
@@ -140,12 +141,17 @@ type S3Storage struct {
 }
 
 // NewS3Storage creates a new S3Storage instance
-func NewS3Storage(accessKeyID string, secretAccessKey string, bucket string, region string, useEnv bool) (HitStorage, error) {
+func NewS3Storage(accessKeyID string, secretAccessKey string, bucket string, region string, useRole bool) (HitStorage, error) {
 	var creds *credentials.Credentials
-	if useEnv {
-		creds = credentials.NewEnvCredentials()
-	} else {
+	if useRole {
+		sess, _ := session.NewSession(&aws.Config{
+			Region: aws.String(region),
+		})
+		creds = ec2rolecreds.NewCredentials(sess)
+	} else if accessKeyID != "" && secretAccessKey != "" {
 		creds = credentials.NewStaticCredentials(accessKeyID, secretAccessKey, "")
+	} else {
+		creds = credentials.NewEnvCredentials()
 	}
 	svc := s3.New(session.Must(session.NewSession(&aws.Config{
 		Credentials: creds,
