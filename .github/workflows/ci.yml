@@ -20,6 +20,11 @@ jobs:
         run: lint
         token: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Set GOPATH
+      run: |
+        echo "##[set-env name=GOPATH;]$(dirname $GITHUB_WORKSPACE)"
+        echo "##[add-path]$(dirname $GITHUB_WORKSPACE)/bin"
+
     - run: go get github.com/GeertJohan/go.rice/rice
 
     - run: make release
