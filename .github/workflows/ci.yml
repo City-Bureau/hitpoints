@@ -20,8 +20,6 @@ jobs:
         run: lint
         token: ${{ secrets.GITHUB_TOKEN }}
 
-    - run: |
-        go get github.com/GeertJohan/go.rice
-        go get github.com/GeertJohan/go.rice/rice
+    - run: go get github.com/GeertJohan/go.rice/rice
 
     - run: make release
