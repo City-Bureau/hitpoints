@@ -1,0 +1,13 @@
+[Unit]
+Description=hitpoints
+After=network.target auditd.service
+
+[Service]
+ExecStart=/var/www/hitpoints ${ command } -p 80 %{ if ssl }--ssl%{ endif } -d ${ domain } ${ command_args }
+KillMode=process
+Restart=always
+RestartPreventExitStatus=255
+Type=simple
+
+[Install]
+WantedBy=multi-user.target
