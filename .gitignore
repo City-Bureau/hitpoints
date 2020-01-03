@@ -1,3 +1,6 @@
 .DS_Store
 .vscode
 release
+.terraform
+*.tfstate*
+rice-box.go
