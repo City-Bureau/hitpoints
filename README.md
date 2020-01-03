@@ -2,7 +2,7 @@
 
 ![Build status](https://github.com/City-Bureau/hitpoints/workflows/CI/badge.svg)
 
-Simple setup for tracking page hits across multiple domains through an embedded 1x1 pixel GIF.
+Minimal tool for counting page hits on embedded content. Inspired by [`pixel-ping`](https://github.com/documentcloud/pixel-ping).
 
 ## Priorities
 

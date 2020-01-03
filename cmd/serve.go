@@ -27,7 +27,6 @@ type CommandConfig struct {
 var fileCmd = &cobra.Command{
 	Use:   "file",
 	Short: "Store archive files on local paths",
-	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmdConf := parseBaseArgs(cmd.Parent())
@@ -45,7 +44,6 @@ var fileCmd = &cobra.Command{
 var azureCmd = &cobra.Command{
 	Use:   "azure",
 	Short: "Store archive files on Azure blob storage",
-	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmdConf := parseBaseArgs(cmd.Parent())
@@ -65,7 +63,6 @@ var azureCmd = &cobra.Command{
 var s3Cmd = &cobra.Command{
 	Use:   "s3",
 	Short: "Store archive files on S3",
-	Long:  `Serve long...`,
 	Args:  cobra.NoArgs,
 	Run: func(cmd *cobra.Command, args []string) {
 		cmdConf := parseBaseArgs(cmd.Parent())
