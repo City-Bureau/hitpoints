@@ -13,7 +13,7 @@ jobs:
 
       - run: make test
 
-      - run: test -z $(gofmt -l .)
+      - run: make format
 
       - uses: grandcolline/golang-github-actions@v1.1.0
         with:
