@@ -19,7 +19,9 @@ func TestAddHit(t *testing.T) {
 	hitServer := &HitServer{
 		cache.New(cache.NoExpiration, 0*time.Second),
 		PixelGifBytes(),
+		make(chan string),
 	}
+	go hitServer.StartWorker()
 
 	if len(hitServer.CacheItems()) != 0 {
 		t.Errorf("Initial cache server has more than one item")
@@ -41,7 +43,8 @@ func TestAddHit(t *testing.T) {
 }
 
 func TestGetRequestHit(t *testing.T) {
-	hitServer := &HitServer{nil, PixelGifBytes()}
+	hitServer := &HitServer{nil, PixelGifBytes(), make(chan string)}
+	go hitServer.StartWorker()
 	headers := http.Header{}
 	baseURL, _ := url.Parse("https://example.com/pixel.gif")
 	headers.Add("Referer", "referer")
@@ -76,13 +79,16 @@ func TestHandlePixelRequest(t *testing.T) {
 	hitServer := &HitServer{
 		cache.New(cache.NoExpiration, 0*time.Second),
 		PixelGifBytes(),
+		make(chan string),
 	}
+	go hitServer.StartWorker()
 
 	paramURL, _ := url.Parse("https://example.com/?url=https://example.com/")
 	r := &http.Request{URL: paramURL}
 	w := httptest.NewRecorder()
 
 	hitServer.HandlePixelRequest(w, r)
+	close(hitServer.hits)
 
 	if len(hitServer.CacheItems()) != 1 {
 		t.Errorf("HandlePixelRequest didn't correctly set cache")

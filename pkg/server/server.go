@@ -16,6 +16,8 @@ import (
 
 const cachePath = "/tmp/hitpoints"
 
+const workerCount = 8
+
 func loadCache() *cache.Cache {
 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
 		log.Println("Cache file not found, creating new cache...")
@@ -38,6 +40,7 @@ func loadCache() *cache.Cache {
 type HitServer struct {
 	hitCache *cache.Cache
 	pixel    []byte
+	hits     chan string
 }
 
 // PixelGifBytes returns the content of the pixel gif in https://github.com/documentcloud/pixel-ping
@@ -50,6 +53,18 @@ func NewHitServer() HitServer {
 	return HitServer{
 		hitCache: loadCache(),
 		pixel:    PixelGifBytes(),
+		hits:     make(chan string, workerCount),
+	}
+}
+
+// StartWorker begins accepting hits on the hits channel and caching them
+func (s *HitServer) StartWorker() {
+	log.Println("Starting worker pool...")
+	for hit := range s.hits {
+		err := s.addHit(hit)
+		if err != nil {
+			log.Println(err)
+		}
 	}
 }
 
@@ -114,16 +129,9 @@ func (s *HitServer) ClearCache() {
 	s.hitCache.Flush()
 }
 
-// HandlePixelRequest updates the cache and returns the pixel GIF
+// HandlePixelRequest sends a message to the hits worker and returns the pixel GIF
 func (s *HitServer) HandlePixelRequest(w http.ResponseWriter, r *http.Request) {
-	reqHit := s.getRequestHit(r)
-	log.Println(r.URL)
-
-	err := s.addHit(reqHit)
-	if err != nil {
-		http.Error(w, "There was an error processing your request", 500)
-		return
-	}
+	s.hits <- s.getRequestHit(r)
 
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	w.Header().Set("Cache-Control", "private, no-cache, proxy-revalidate, max-age=0")

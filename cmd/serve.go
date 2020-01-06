@@ -171,6 +171,7 @@ func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 	var mgr *autocert.Manager
 
 	hitServer := server.NewHitServer()
+	go hitServer.StartWorker()
 
 	c := cron.New()
 
