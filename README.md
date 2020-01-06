@@ -2,38 +2,24 @@
 
 ![Build status](https://github.com/City-Bureau/hitpoints/workflows/CI/badge.svg)
 
-Minimal tool for counting page hits on embedded content. Inspired by [`pixel-ping`](https://github.com/documentcloud/pixel-ping).
-
-## Priorities
-
-* Simple to setup on a single server
-* Speed, not slowing anything down
-* Writes everything to static file storage for easier archiving
-* Prioritizes simplicity over absolute accuracy
+Minimal tool for counting page hits on embedded content. Inspired by [`pixel-ping`](https://github.com/documentcloud/pixel-ping). It's designed to be fast and simple by running a Go app on a single 500MB RAM server and writing all output to static file storage.
 
 ## Deployment
 
-Deployment setups for AWS and Azure using [Terraform](https://www.terraform.io/) are available in the [`deploy/`](./deploy) directory. In general, they run the following steps:
+Deployment setups for AWS and Azure using [Terraform](https://www.terraform.io/) are available in the [`deploy/`](./deploy) directory.
 
-* Setup a storage container/bucket for the outputs
-* Provision a small (500MB RAM) server
-* Setup a swapfile
-* Configure security rules for inbound traffic to only allow inbound connections for HTTP, HTTPS, and SSH (with provided key)
-* Copy a release binary
-* Setup `systemd` service for running the service
+Terraform will create static file storage, create and provision a server and configure network security rules. It will output the public IP address of the server when it's finished, and you'll need to update your DNS with an A record pointing to that IP.
 
-You'll need to point the domain you want to use to the IP that comes out of outputs before the SSL certificate can be created.
+## Usage
 
-## Using
-
-Include snippet on target page with Javascript
+Include snippet on target page with Javascript:
 
 ```html
 <script type="text/javascript" src="https://{DOMAIN}/hitpoints.js" async="true"></script>
 ```
 
-or with an image tag
+or with an image tag (`hitpoints.gif` isn't required, all endpoints other than `hitpoints.js` will return the pixel GIF):
 
 ```html
-<img src="https://{DOMAIN}" width="1" height="1" alt="" />
+<img src="https://{DOMAIN}/hitpoints.gif" width="1" height="1" alt="" />
 ```
