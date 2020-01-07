@@ -9,6 +9,7 @@ jobs:
   release:
     name: Publish release
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v1
 
@@ -28,6 +29,7 @@ jobs:
   release-assets:
     name: Publish release assets for ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
     strategy:
       matrix:
         arch: [linux, windows, darwin]
