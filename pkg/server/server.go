@@ -18,6 +18,8 @@ const cachePath = "/tmp/hitpoints"
 
 const workerCount = 8
 
+const defaultHit = "NA"
+
 func loadCache() *cache.Cache {
 	if _, err := os.Stat(cachePath); os.IsNotExist(err) {
 		log.Println("Cache file not found, creating new cache...")
@@ -67,8 +69,6 @@ func (s *HitServer) StartWorker() {
 		}
 	}
 }
-
-const defaultHit = "NA"
 
 // Get hit value from request if there
 func (s *HitServer) getRequestHit(r *http.Request) string {
