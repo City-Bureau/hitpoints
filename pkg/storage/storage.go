@@ -70,7 +70,7 @@ func (s *FileStorage) Archive(items map[string]int) error {
 	}
 
 	hitsDir := datetimePath(rec.Timestamp)
-	os.MkdirAll(hitsDir, 0644)
+	os.MkdirAll(filepath.Join(s.path, hitsDir), 0644)
 	return ioutil.WriteFile(filepath.Join(s.path, hitsDir, "hits.json"), recB, 0644)
 }
 
