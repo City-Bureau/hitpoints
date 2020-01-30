@@ -38,6 +38,12 @@ variable "ssh_priv_key_path" {
   description = "Path to private SSH key for keyname"
 }
 
+variable "allow_ssh" {
+  type        = bool
+  description = "Whether SSH connections should be allowed"
+  default     = true
+}
+
 variable "ssl" {
   type        = bool
   description = "Whether SSL should be enabled"

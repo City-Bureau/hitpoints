@@ -35,3 +35,9 @@ variable "ssl" {
   description = "Whether SSL should be enabled"
   default     = true
 }
+
+variable "allow_ssh" {
+  type        = bool
+  description = "Whether SSH connections should be allowed"
+  default     = true
+}
