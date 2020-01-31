@@ -1,3 +1,3 @@
 output "address" {
-  value = "${aws_instance.hitpoints.public_ip}"
+  value = "${aws_eip.hitpoints.public_ip}"
 }

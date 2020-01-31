@@ -19,7 +19,7 @@ variable "tags" {
 
 variable "instance_type" {
   description = "The type of the instance"
-  default     = "t2.nano"
+  default     = "t3a.nano"
 }
 
 variable "domain" {

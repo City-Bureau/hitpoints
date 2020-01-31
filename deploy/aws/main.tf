@@ -62,6 +62,15 @@ resource "aws_s3_bucket" "hitpoints" {
   }
 }
 
+resource "aws_eip" "hitpoints" {
+  vpc = true
+}
+
+resource "aws_eip_association" "hitpoints" {
+  allocation_id = aws_eip.hitpoints.id
+  instance_id   = aws_instance.hitpoints.id
+}
+
 resource "aws_security_group" "hitpoints" {
   name   = "Hitpoints Security Group"
   vpc_id = var.vpc_id
