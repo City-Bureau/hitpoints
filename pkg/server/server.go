@@ -18,6 +18,8 @@ const cachePath = "/tmp/hitpoints"
 
 const workerCount = 8
 
+const chanBuffer = 8
+
 const defaultHit = "NA"
 
 func loadCache() *cache.Cache {
@@ -55,18 +57,22 @@ func NewHitServer() HitServer {
 	return HitServer{
 		hitCache: loadCache(),
 		pixel:    PixelGifBytes(),
-		hits:     make(chan string, workerCount),
+		hits:     make(chan string, chanBuffer),
 	}
 }
 
 // StartWorker begins accepting hits on the hits channel and caching them
 func (s *HitServer) StartWorker() {
 	log.Println("Starting worker pool...")
-	for hit := range s.hits {
-		err := s.addHit(hit)
-		if err != nil {
-			log.Println(err)
-		}
+	for i := 0; i < workerCount; i++ {
+		go func() {
+			for hit := range s.hits {
+				err := s.addHit(hit)
+				if err != nil {
+					log.Println(err)
+				}
+			}
+		}()
 	}
 }
 
