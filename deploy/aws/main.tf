@@ -56,19 +56,22 @@ resource "aws_s3_bucket" "hitpoints" {
   bucket = "${var.prefix}-output"
   acl    = "private"
   tags   = var.tags
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "aws_security_group" "hitpoints" {
-  name        = "Hitpoints Security Group"
-  description = "Allow ssh, http and https"
-  vpc_id      = var.vpc_id
-  tags        = var.tags
+  name   = "Hitpoints Security Group"
+  vpc_id = var.vpc_id
+  tags   = var.tags
 
   ingress {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = var.allow_ssh ? ["0.0.0.0/0"] : []
   }
 
   ingress {
@@ -111,7 +114,7 @@ resource "aws_instance" "hitpoints" {
   ami                         = data.aws_ami.ubuntu.id
   instance_type               = var.instance_type
   key_name                    = var.keyname
-  security_groups             = ["${aws_security_group.hitpoints.id}"]
+  security_groups             = [aws_security_group.hitpoints.id]
   subnet_id                   = var.subnet_id
   iam_instance_profile        = aws_iam_instance_profile.hitpoints_profile.id
   associate_public_ip_address = true
@@ -142,6 +145,10 @@ resource "aws_instance" "hitpoints" {
 
   provisioner "remote-exec" {
     script = "${path.module}/../files/setup-hitpoints.sh"
+  }
+
+  lifecycle {
+    ignore_changes = [security_groups]
   }
 }
 

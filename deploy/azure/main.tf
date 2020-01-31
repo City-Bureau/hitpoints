@@ -20,6 +20,10 @@ resource "azurerm_storage_container" "hitpoints" {
   name                  = "outputs"
   storage_account_name  = azurerm_storage_account.hitpoints.name
   container_access_type = "blob"
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 resource "azurerm_virtual_network" "hitpoints" {
@@ -44,11 +48,11 @@ resource "azurerm_network_security_group" "hitpoints" {
   location            = azurerm_resource_group.hitpoints.location
 
   security_rule {
-    name                       = "AllowSSHInbound"
-    description                = "Allow inbound SSH traffic on port 22"
+    name                       = "SSHInbound"
+    description                = "Manage inbound SSH traffic on port 22"
     priority                   = 400
     direction                  = "Inbound"
-    access                     = "Allow"
+    access                     = var.allow_ssh ? "Allow" : "Deny"
     protocol                   = "*"
     source_port_range          = "*"
     destination_port_range     = 22
