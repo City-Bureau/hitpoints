@@ -166,6 +166,7 @@ func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", hitServer.HandlePixelRequest)
 	mux.HandleFunc("/hitpoints.js", hitServer.HandleJS(cmdConf.domain, cmdConf.ssl))
+	hitServer.HandleDashboard(mux, "user", "pass")
 	srv := serverFromMux(mux)
 
 	if cmdConf.ssl {

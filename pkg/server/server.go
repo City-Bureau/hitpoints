@@ -2,6 +2,7 @@ package server
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/gob"
 	"fmt"
 	"io/ioutil"
@@ -10,6 +11,7 @@ import (
 	"net/url"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	rice "github.com/GeertJohan/go.rice"
@@ -176,5 +178,72 @@ func (s *HitServer) HandleJS(domain string, ssl bool) func(http.ResponseWriter, 
 		w.Header().Set("Content-Type", "application/javascript")
 		w.Header().Set("Content-Length", strconv.Itoa(len(jsBytes)))
 		w.Write(jsBytes)
+	}
+}
+
+// HandleDashboard sets up the dashboard on a given ServeMux with HTTP basic auth
+func (s *HitServer) HandleDashboard(mux *http.ServeMux, username string, password string) {
+	dashBox, err := rice.FindBox("../../static/dashboard")
+	if err != nil {
+		log.Fatal(err)
+	}
+	dashPage, err := dashBox.String("index.html")
+	if err != nil {
+		log.Fatal(err)
+	}
+	dashBytes := []byte(dashPage)
+	dashFunc := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/html")
+		w.Header().Set("Content-Length", strconv.Itoa(len(dashBytes)))
+		w.Write(dashBytes)
+	}
+
+	dashJS, err := dashBox.String("script.js")
+	if err != nil {
+		log.Fatal(err)
+	}
+	dashJSBytes := []byte(dashJS)
+	dashJSFunc := func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Content-Length", strconv.Itoa(len(dashJSBytes)))
+		w.Write(dashJSBytes)
+	}
+
+	mux.HandleFunc("/dashboard/", basicAuth(dashFunc, username, password))
+	mux.HandleFunc("/dashboard/script.js", basicAuth(dashJSFunc, username, password))
+}
+
+// TODO: Configuration for setting credentials from file, include in CLI, Terraform
+// Based on http://stackoverflow.com/a/21937924/556573
+// https://gist.github.com/elithrar/9146306
+func basicAuth(h http.HandlerFunc, username string, password string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+
+		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
+
+		s := strings.SplitN(r.Header.Get("Authorization"), " ", 2)
+		if len(s) != 2 {
+			http.Error(w, "Not authorized", 401)
+			return
+		}
+
+		b, err := base64.StdEncoding.DecodeString(s[1])
+		if err != nil {
+			http.Error(w, err.Error(), 401)
+			return
+		}
+
+		pair := strings.SplitN(string(b), ":", 2)
+		if len(pair) != 2 {
+			http.Error(w, "Not authorized", 401)
+			return
+		}
+
+		if pair[0] != username || pair[1] != password {
+			http.Error(w, "Not authorized", 401)
+			return
+		}
+
+		h.ServeHTTP(w, r)
 	}
 }
