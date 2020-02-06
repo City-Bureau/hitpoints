@@ -35,7 +35,7 @@ release/hitpoints-windows-amd64.tar.gz: release/hitpoints-windows-amd64
 
 .PRECIOUS: release/hitpoints-%-amd64
 release/hitpoints-%-amd64:
-	rice embed-go -i ./cmd
+	rice embed-go -i ./pkg/server
 	mkdir -p $@
 	cp README.md $@
 	cp LICENSE $@

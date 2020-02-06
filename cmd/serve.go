@@ -5,12 +5,11 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 	"time"
 
 	"github.com/City-Bureau/hitpoints/pkg/server"
 	"github.com/City-Bureau/hitpoints/pkg/storage"
-	rice "github.com/GeertJohan/go.rice"
+
 	cron "github.com/robfig/cron/v3"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/acme/autocert"
@@ -138,35 +137,6 @@ func serverFromMux(mux *http.ServeMux) *http.Server {
 	}
 }
 
-func makeJSHandler(domain string, ssl bool) func(http.ResponseWriter, *http.Request) {
-	jsBox, err := rice.FindBox("../static")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	jsTmpl, err := jsBox.String("hitpoints.js")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	var scheme string
-	if ssl {
-		scheme = "https"
-	} else {
-		scheme = "http"
-	}
-
-	jsStr := fmt.Sprintf(jsTmpl, scheme, domain)
-	jsBytes := []byte(jsStr)
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/javascript")
-		w.Header().Set("Content-Length", strconv.Itoa(len(jsBytes)))
-		w.Write(jsBytes)
-	}
-}
-
 func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 	var mgr *autocert.Manager
 
@@ -195,7 +165,7 @@ func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/", hitServer.HandlePixelRequest)
-	mux.HandleFunc("/hitpoints.js", makeJSHandler(cmdConf.domain, cmdConf.ssl))
+	mux.HandleFunc("/hitpoints.js", hitServer.HandleJS(cmdConf.domain, cmdConf.ssl))
 	srv := serverFromMux(mux)
 
 	if cmdConf.ssl {
