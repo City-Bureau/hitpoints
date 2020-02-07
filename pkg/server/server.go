@@ -173,7 +173,8 @@ func (s *HitServer) HandleJS(domain string, ssl bool) func(http.ResponseWriter, 
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
-		w.Header().Set("Content-Type", "application/javascript")
+		w.Header().Set("Cache-Control", "max-age=604800, public")
+		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
 		w.Header().Set("Content-Length", strconv.Itoa(len(jsBytes)))
 		w.Write(jsBytes)
 	}
