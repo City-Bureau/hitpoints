@@ -3,7 +3,7 @@ BUILD := $(shell git rev-parse --short HEAD)
 LDFLAGS := -ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 ARCH_LIST = darwin linux windows
 
-.PHONY: clean install start test format lint release
+.PHONY: clean install start test format lint build
 
 start:
 	go run ./main.go file
@@ -24,7 +24,7 @@ lint:
 clean:
 	rm -rf release
 
-release: $(patsubst %, release/hitpoints-%-amd64.tar.gz, $(ARCH_LIST))
+build: $(patsubst %, release/hitpoints-%-amd64.tar.gz, $(ARCH_LIST))
 
 release/hitpoints-%-amd64.tar.gz: release/hitpoints-%-amd64
 	tar -czvf $@ $<

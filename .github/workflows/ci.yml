@@ -34,4 +34,4 @@ jobs:
 
       - run: go get github.com/GeertJohan/go.rice/rice
 
-      - run: make release
+      - run: make build
