@@ -157,7 +157,7 @@ resource "aws_instance" "hitpoints" {
   }
 
   lifecycle {
-    ignore_changes = [security_groups]
+    ignore_changes = [security_groups, ami]
   }
 }
 
