@@ -112,22 +112,6 @@ func parseBaseArgs(cmd *cobra.Command) CommandConfig {
 	return CommandConfig{port, cronSpec, domain, ssl}
 }
 
-func archiveAndClearCache(hitServer *server.HitServer, hitStorage storage.HitStorage) error {
-	hitMap := hitServer.CacheItems()
-	// Exit if cache is currently empty
-	if len(hitMap) == 0 {
-		return nil
-	}
-
-	err := hitStorage.Archive(hitMap)
-	if err != nil {
-		return err
-	}
-
-	hitServer.ClearCache()
-	return nil
-}
-
 func serverFromMux(mux *http.ServeMux) *http.Server {
 	return &http.Server{
 		ReadTimeout:  5 * time.Second,
@@ -155,9 +139,16 @@ func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 
 	c.AddFunc(cmdConf.cronSpec, func() {
 		log.Println("Archiving...")
-		err := archiveAndClearCache(&hitServer, hitStorage)
+		hitMap := hitServer.CacheItems()
+		// Exit if cache is currently empty
+		if len(hitMap) == 0 {
+			return
+		}
+		err := hitStorage.Archive(hitMap)
 		if err != nil {
 			log.Println(err)
+		} else {
+			hitServer.ClearCache()
 		}
 	})
 
