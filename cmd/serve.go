@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/City-Bureau/hitpoints/pkg/cache"
 	"github.com/City-Bureau/hitpoints/pkg/server"
 	"github.com/City-Bureau/hitpoints/pkg/storage"
 
@@ -124,31 +125,25 @@ func serverFromMux(mux *http.ServeMux) *http.Server {
 func serve(cmdConf CommandConfig, hitStorage storage.HitStorage) {
 	var mgr *autocert.Manager
 
+	hitCache := cache.NewHitGoCache()
 	hitServer := server.NewHitServer()
-	go hitServer.StartWorker()
+	go hitServer.StartWorker(hitCache.HandleHit)
 
 	c := cron.New()
 
-	c.AddFunc("*/5 * * * *", func() {
-		log.Println("Saving cache to disk")
-		err := hitServer.SaveCache()
-		if err != nil {
-			log.Fatal(err)
-		}
-	})
+	_, _ = c.AddFunc("*/5 * * * *", hitCache.OnCron)
 
-	c.AddFunc(cmdConf.cronSpec, func() {
+	_, _ = c.AddFunc(cmdConf.cronSpec, func() {
 		log.Println("Archiving...")
-		hitMap := hitServer.CacheItems()
+		hitMap := hitCache.Items()
 		// Exit if cache is currently empty
 		if len(hitMap) == 0 {
 			return
 		}
+		hitCache.Clear()
 		err := hitStorage.Archive(hitMap)
 		if err != nil {
 			log.Println(err)
-		} else {
-			hitServer.ClearCache()
 		}
 	})
 

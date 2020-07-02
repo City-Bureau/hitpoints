@@ -10,41 +10,10 @@ import (
 	"net/url"
 	"strconv"
 	"testing"
-	"time"
-
-	cache "github.com/patrickmn/go-cache"
 )
 
-func TestAddHit(t *testing.T) {
-	hitServer := &HitServer{
-		cache.New(cache.NoExpiration, 0*time.Second),
-		PixelGifBytes(),
-		make(chan string),
-	}
-	go hitServer.StartWorker()
-
-	if len(hitServer.CacheItems()) != 0 {
-		t.Errorf("Initial cache server has more than one item")
-	}
-
-	hitServer.addHit("test")
-	testVal, found := hitServer.hitCache.Get("test")
-
-	if !found || testVal != 1 {
-		t.Errorf("Add hit not setting value to 1")
-	}
-
-	hitServer.addHit("test")
-	testVal, found = hitServer.hitCache.Get("test")
-
-	if !found || testVal != 2 {
-		t.Errorf("Add hit not incrementing value to 2")
-	}
-}
-
 func TestGetRequestHit(t *testing.T) {
-	hitServer := &HitServer{nil, PixelGifBytes(), make(chan string)}
-	go hitServer.StartWorker()
+	hitServer := &HitServer{PixelGifBytes(), make(chan string)}
 	headers := http.Header{}
 	baseURL, _ := url.Parse("https://example.com/pixel.gif")
 	headers.Add("Referer", "referer")
@@ -77,11 +46,14 @@ func TestGetRequestHit(t *testing.T) {
 
 func TestHandlePixelRequest(t *testing.T) {
 	hitServer := &HitServer{
-		cache.New(cache.NoExpiration, 0*time.Second),
 		PixelGifBytes(),
 		make(chan string),
 	}
-	go hitServer.StartWorker()
+	hitMap := map[string]int{}
+	addHit := func(hit string) {
+		hitMap[hit] = 1
+	}
+	go hitServer.StartWorker(addHit)
 
 	paramURL, _ := url.Parse("https://example.com/?url=https://example.com/")
 	r := &http.Request{URL: paramURL}
@@ -90,8 +62,8 @@ func TestHandlePixelRequest(t *testing.T) {
 	hitServer.HandlePixelRequest(w, r)
 	close(hitServer.hits)
 
-	if len(hitServer.CacheItems()) != 1 {
-		t.Errorf("HandlePixelRequest didn't correctly set cache")
+	if hitMap["https://example.com/"] != 1 {
+		t.Errorf("HandlePixelRequest didn't correctly add hit")
 	}
 
 	contentLen := w.Header().Get("Content-Length")
