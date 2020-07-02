@@ -19,7 +19,7 @@ format:
 	test -z $$(gofmt -l .)
 
 lint:
-	golint -set_exit_status ./...
+	golangci-lint run
 
 clean:
 	rm -rf release
