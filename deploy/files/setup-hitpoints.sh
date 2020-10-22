@@ -14,3 +14,4 @@ sudo mkdir -p /var/www
 sudo chmod +x /home/ubuntu/hitpoints
 sudo mv /home/ubuntu/hitpoints /var/www/hitpoints
 sudo systemctl start hitpoints
+sudo systemctl enable hitpoints
